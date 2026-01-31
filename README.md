@@ -1,130 +1,149 @@
 # mControlPanel
 
-A lightweight, high-performance web hosting control panel written in Go. Single binary deployment with minimal resource usage.
+แผงควบคุมเว็บโฮสติ้งที่เบาและเร็ว เขียนด้วยภาษา Go - ติดตั้งง่าย ใช้ทรัพยากรน้อย
 
-## ✨ Features
+## ✨ คุณสมบัติ
 
-- **Single Binary** - No runtime dependencies, just one executable
-- **Low Memory** - Uses ~10-20MB RAM (vs 200MB+ for Python/Node alternatives)
-- **Fast** - Instant startup, sub-millisecond response times
-- **Cross-Platform** - Works on Linux and Windows
-- **Unlimited Domains** - Create and manage virtual hosts
-- **MySQL Management** - Full database CRUD operations
-- **WordPress Installer** - One-click WordPress deployment
-- **PHP Multi-Version** - Support for PHP 7.4, 8.0, 8.1, 8.2, 8.3
-- **Backup System** - Full/files/database backups
-- **Service Control** - Start/stop/restart Nginx, MySQL, PHP-FPM
-- **Modern UI** - Clean, responsive dark-themed interface
+- **ไฟล์เดียวจบ** - ไม่ต้องติดตั้ง runtime เพิ่มเติม แค่ไฟล์ exe/binary ไฟล์เดียว
+- **ประหยัด RAM** - ใช้แค่ ~15MB (เทียบกับ Python/Node ที่ใช้ 200MB+)
+- **เร็วมาก** - เริ่มต้นทันที ตอบสนองภายในมิลลิวินาที
+- **ข้ามแพลตฟอร์ม** - ใช้ได้ทั้ง Linux และ Windows
+- **โดเมนไม่จำกัด** - สร้างและจัดการ virtual hosts ได้เท่าที่ต้องการ
+- **จัดการ MySQL** - สร้าง/ลบ/จัดการฐานข้อมูลได้ครบ
+- **ติดตั้ง WordPress** - คลิกเดียวติดตั้ง WordPress ได้เลย
+- **รองรับ PHP หลายเวอร์ชัน** - PHP 7.4, 8.0, 8.1, 8.2, 8.3
+- **ระบบ Backup** - สำรองข้อมูลทั้งไฟล์และฐานข้อมูล
+- **ควบคุม Services** - Start/Stop/Restart Nginx, MySQL, PHP-FPM
+- **UI ทันสมัย** - หน้าตาสวย ใช้งานง่าย โทนสีเข้ม
 
-## 📊 Resource Comparison
+## 📊 เปรียบเทียบทรัพยากร
 
-| Panel | Language | Binary Size | RAM Usage | Startup |
-|-------|----------|-------------|-----------|---------|
-| **mControlPanel** | Go | ~15MB | ~15MB | <1s |
-| cPanel | Perl/C | N/A | 500MB+ | 30s+ |
-| Plesk | PHP | N/A | 400MB+ | 20s+ |
-| Similar Python Panel | Python | ~50MB+ deps | 200MB+ | 5s+ |
+| Panel | ภาษา | ขนาด Binary | RAM | เวลาเริ่มต้น |
+|-------|------|-------------|-----|-------------|
+| **mControlPanel** | Go | ~15MB | ~15MB | <1 วินาที |
+| cPanel | Perl/C | N/A | 500MB+ | 30+ วินาที |
+| Plesk | PHP | N/A | 400MB+ | 20+ วินาที |
+| Python Panel อื่นๆ | Python | 50MB+ deps | 200MB+ | 5+ วินาที |
 
-## 🚀 Quick Install
+---
 
-### Linux (Ubuntu/Debian)
+## 🚀 วิธีติดตั้ง
+
+### ⚡ ติดตั้งด่วน (ดาวน์โหลด Binary สำเร็จรูป)
+
+> **หมายเหตุ:** วิธีนี้ต้องรอสร้าง Release ก่อน หรือใช้วิธี Build จาก Source ด้านล่าง
+
+### 🔧 Build จาก Source (แนะนำ)
+
+#### Linux (Ubuntu/Debian)
 
 ```bash
-# Install dependencies
-sudo apt update && sudo apt install -y nginx mysql-server php-fpm curl
+# 1. ติดตั้ง dependencies ระบบ
+sudo apt update
+sudo apt install -y nginx mysql-server php-fpm git curl tar
 
-# Download mControlPanel
-curl -Lo mcontrolpanel https://github.com/thanadon-dev/mcontrolpanel/releases/latest/download/mcontrolpanel-linux-amd64
-chmod +x mcontrolpanel
+# 2. ติดตั้ง Go
+wget https://go.dev/dl/go1.21.6.linux-amd64.tar.gz
+sudo tar -C /usr/local -xzf go1.21.6.linux-amd64.tar.gz
+echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
+source ~/.bashrc
 
-# Run setup
+# 3. เริ่มต้น services
+sudo systemctl enable --now nginx mysql
+
+# 4. Clone และ Build
+git clone https://github.com/thanadon-dev/mcontrolpanel.git
+cd mcontrolpanel
+go build -ldflags="-s -w" -o mcontrolpanel .
+
+# 5. รัน setup ครั้งแรก
 sudo ./mcontrolpanel --setup
 
-# Start the panel
+# 6. เริ่มใช้งาน
 sudo ./mcontrolpanel
 ```
 
-### Linux (CentOS/RHEL/Fedora)
+#### Linux (CentOS/RHEL/Fedora)
 
 ```bash
-# Install dependencies
-sudo dnf install -y nginx mysql-server php-fpm curl
+# 1. ติดตั้ง dependencies
+sudo dnf install -y nginx mysql-server php-fpm git curl tar
 
-# Start services
+# 2. ติดตั้ง Go
+wget https://go.dev/dl/go1.21.6.linux-amd64.tar.gz
+sudo tar -C /usr/local -xzf go1.21.6.linux-amd64.tar.gz
+echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
+source ~/.bashrc
+
+# 3. เริ่มต้น services
 sudo systemctl enable --now nginx mysqld php-fpm
 
-# Download mControlPanel
-curl -Lo mcontrolpanel https://github.com/thanadon-dev/mcontrolpanel/releases/latest/download/mcontrolpanel-linux-amd64
-chmod +x mcontrolpanel
+# 4. Clone และ Build
+git clone https://github.com/thanadon-dev/mcontrolpanel.git
+cd mcontrolpanel
+go build -ldflags="-s -w" -o mcontrolpanel .
 
-# Run setup
+# 5. รัน setup ครั้งแรก
 sudo ./mcontrolpanel --setup
 
-# Start the panel
+# 6. เริ่มใช้งาน
 sudo ./mcontrolpanel
 ```
 
-### Windows
+#### Windows
 
 ```powershell
-# Install Chocolatey (if not installed)
+# 1. ติดตั้ง Chocolatey (ถ้ายังไม่มี)
 Set-ExecutionPolicy Bypass -Scope Process -Force
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
 iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
 
-# Install dependencies
-choco install nginx mysql php -y
+# 2. ติดตั้ง dependencies
+choco install nginx mysql php golang git -y
 
-# Download mControlPanel
-Invoke-WebRequest -Uri "https://github.com/thanadon-dev/mcontrolpanel/releases/latest/download/mcontrolpanel-windows-amd64.exe" -OutFile "mcontrolpanel.exe"
+# 3. รีสตาร์ท PowerShell แล้วรัน:
+git clone https://github.com/thanadon-dev/mcontrolpanel.git
+cd mcontrolpanel
+go build -ldflags="-s -w" -o mcontrolpanel.exe .
 
-# Run setup
+# 4. รัน setup ครั้งแรก
 .\mcontrolpanel.exe --setup
 
-# Start the panel
+# 5. เริ่มใช้งาน
 .\mcontrolpanel.exe
 ```
 
-### Build from Source
+---
 
-```bash
-# Clone repository
-git clone https://github.com/thanadon-dev/mcontrolpanel.git
-cd mcontrolpanel
-
-# Build
-go build -ldflags="-s -w" -o mcontrolpanel .
-
-# Run
-./mcontrolpanel --setup
-```
-
-## 📁 Project Structure
+## 📁 โครงสร้างโปรเจค
 
 ```
 mcontrolpanel/
-├── main.go                    # Entry point
-├── go.mod                     # Go modules
+├── main.go                      # จุดเริ่มต้นโปรแกรม
+├── go.mod                       # Go modules
+├── config.example.yaml          # ตัวอย่าง config
 ├── internal/
-│   ├── config/config.go       # Configuration management
-│   ├── database/database.go   # SQLite database & models
-│   ├── server/server.go       # HTTP server setup
-│   ├── handlers/handlers.go   # Request handlers
+│   ├── config/config.go         # จัดการ configuration
+│   ├── database/database.go     # SQLite database และ models
+│   ├── server/server.go         # HTTP server setup
+│   ├── handlers/handlers.go     # จัดการ requests ทั้งหมด
 │   └── middleware/middleware.go # Auth middleware
 └── web/
-    ├── templates/             # HTML templates
-    └── static/                # CSS/JS assets
+    ├── templates/               # HTML templates
+    └── static/                  # CSS/JS assets
 ```
 
-## ⚙️ Configuration
+---
 
-Create `config.yaml` in the same directory:
+## ⚙️ การตั้งค่า
+
+สร้างไฟล์ `config.yaml` ในโฟลเดอร์เดียวกัน:
 
 ```yaml
 server:
   host: 127.0.0.1
   port: 8080
-  secret_key: your-secret-key-here
+  secret_key: เปลี่ยนเป็น-string-สุ่มของคุณ
 
 database:
   path: data/panel.db
@@ -143,54 +162,67 @@ php:
   versions: ["7.4", "8.0", "8.1", "8.2", "8.3"]
 ```
 
+---
+
 ## 🔧 Command Line Options
 
 ```
-Usage: mcontrolpanel [options]
+การใช้งาน: mcontrolpanel [options]
 
 Options:
-  --config string   Path to config file (default "config.yaml")
-  --host string     Override server host
-  --port int        Override server port
-  --setup           Run initial setup wizard
-  --version         Show version information
+  --config string   พาธไปยังไฟล์ config (ค่าเริ่มต้น "config.yaml")
+  --host string     กำหนด host แทนค่าใน config
+  --port int        กำหนด port แทนค่าใน config
+  --setup           รัน setup wizard ครั้งแรก
+  --version         แสดงเวอร์ชัน
 ```
-
-## 🖥️ Usage
-
-1. Open your browser to `http://127.0.0.1:8080`
-2. Login with your admin credentials
-3. Start managing your domains, databases, and WordPress sites!
-
-## 🔒 Security Notes
-
-- Change the default `secret_key` in production
-- Run behind a reverse proxy (Nginx) with HTTPS in production
-- Restrict panel access to trusted IPs
-- Use strong admin passwords
-
-## 🛠️ Development
-
-```bash
-# Run in development mode
-go run . --config config.yaml
-
-# Build for production
-go build -ldflags="-s -w" -o mcontrolpanel .
-
-# Cross-compile
-GOOS=linux GOARCH=amd64 go build -o mcontrolpanel-linux-amd64 .
-GOOS=windows GOARCH=amd64 go build -o mcontrolpanel-windows-amd64.exe .
-```
-
-## 📝 License
-
-MIT License - feel free to use for personal or commercial projects.
-
-## 🤝 Contributing
-
-Contributions welcome! Please open an issue or pull request.
 
 ---
 
-**mControlPanel** - Lightweight hosting made simple.
+## 🖥️ วิธีใช้งาน
+
+1. เปิด browser ไปที่ `http://127.0.0.1:8080`
+2. Login ด้วย username/password ที่ตั้งตอน setup
+3. เริ่มจัดการ domains, databases และ WordPress ได้เลย!
+
+---
+
+## 🔒 หมายเหตุด้านความปลอดภัย
+
+- ⚠️ เปลี่ยน `secret_key` ในไฟล์ config ก่อนใช้งานจริง
+- 🔐 ควรรันผ่าน reverse proxy (Nginx) พร้อม HTTPS
+- 🛡️ จำกัดการเข้าถึง panel เฉพาะ IP ที่เชื่อถือได้
+- 🔑 ใช้รหัสผ่านที่แข็งแรงสำหรับ admin
+
+---
+
+## 🛠️ สำหรับนักพัฒนา
+
+```bash
+# รันในโหมด development
+go run . --config config.yaml
+
+# Build สำหรับ production (ขนาดเล็กลง)
+go build -ldflags="-s -w" -o mcontrolpanel .
+
+# Cross-compile สำหรับ platform อื่น
+GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o mcontrolpanel-linux-amd64 .
+GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o mcontrolpanel-windows-amd64.exe .
+GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o mcontrolpanel-linux-arm64 .
+```
+
+---
+
+## 📝 License
+
+MIT License - ใช้ได้ฟรีทั้งส่วนตัวและเชิงพาณิชย์
+
+---
+
+## 🤝 ร่วมพัฒนา
+
+ยินดีรับ contributions! เปิด issue หรือ pull request ได้เลย
+
+---
+
+**mControlPanel** - โฮสติ้งง่ายๆ เบาๆ ไวๆ 🚀
