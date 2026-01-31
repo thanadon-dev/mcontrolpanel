@@ -1,0 +1,55 @@
+{{template "base.html" .}}
+{{define "title"}}Services - mControlPanel{{end}}
+{{define "content"}}
+<div class="sidebar">
+    <h1>mControlPanel</h1>
+    <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/domains">Domains</a>
+        <a href="/databases">Databases</a>
+        <a href="/wordpress">WordPress</a>
+        <a href="/backups">Backups</a>
+        <a href="/services" class="active">Services</a>
+        <a href="/settings">Settings</a>
+        <a href="/profile">Profile</a>
+        <a href="/logout">Logout</a>
+    </nav>
+</div>
+<div class="main">
+    <div class="header">
+        <h2>Services</h2>
+    </div>
+
+    <div class="grid" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="card">
+            <h3>Nginx</h3>
+            <p>{{if index .services "nginx"}}<span class="badge badge-success">Running</span>{{else}}<span class="badge badge-danger">Stopped</span>{{end}}</p>
+            <div class="flex mt-20">
+                <form method="POST" action="/services/nginx/start"><button class="btn btn-sm btn-success">Start</button></form>
+                <form method="POST" action="/services/nginx/restart"><button class="btn btn-sm">Restart</button></form>
+                <form method="POST" action="/services/nginx/stop"><button class="btn btn-sm btn-danger">Stop</button></form>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>MySQL</h3>
+            <p>{{if index .services "mysql"}}<span class="badge badge-success">Running</span>{{else}}<span class="badge badge-danger">Stopped</span>{{end}}</p>
+            <div class="flex mt-20">
+                <form method="POST" action="/services/mysql/start"><button class="btn btn-sm btn-success">Start</button></form>
+                <form method="POST" action="/services/mysql/restart"><button class="btn btn-sm">Restart</button></form>
+                <form method="POST" action="/services/mysql/stop"><button class="btn btn-sm btn-danger">Stop</button></form>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>PHP-FPM</h3>
+            <p>{{if index .services "php"}}<span class="badge badge-success">Running</span>{{else}}<span class="badge badge-danger">Stopped</span>{{end}}</p>
+            <div class="flex mt-20">
+                <form method="POST" action="/services/php-fpm/start"><button class="btn btn-sm btn-success">Start</button></form>
+                <form method="POST" action="/services/php-fpm/restart"><button class="btn btn-sm">Restart</button></form>
+                <form method="POST" action="/services/php-fpm/stop"><button class="btn btn-sm btn-danger">Stop</button></form>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}

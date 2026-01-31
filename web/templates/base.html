@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{block "title" .}}mControlPanel{{end}}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; }
+        a { color: #667eea; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .sidebar { position: fixed; left: 0; top: 0; width: 220px; height: 100vh; background: #16213e; padding: 20px 0; }
+        .sidebar h1 { color: #667eea; font-size: 18px; padding: 0 20px 20px; border-bottom: 1px solid #333; }
+        .sidebar nav a { display: block; padding: 12px 20px; color: #aaa; transition: all 0.2s; }
+        .sidebar nav a:hover, .sidebar nav a.active { background: #1a1a2e; color: #fff; text-decoration: none; }
+        .main { margin-left: 220px; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .header h2 { font-size: 24px; }
+        .card { background: #16213e; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .card h3 { margin-bottom: 15px; font-size: 16px; color: #888; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .stat { text-align: center; padding: 20px; }
+        .stat .num { font-size: 36px; font-weight: bold; color: #667eea; }
+        .stat .label { color: #888; margin-top: 5px; }
+        .btn { display: inline-block; padding: 10px 20px; background: #667eea; color: #fff; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; }
+        .btn:hover { background: #5a6fd6; text-decoration: none; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        .btn-danger { background: #e74c3c; }
+        .btn-danger:hover { background: #c0392b; }
+        .btn-success { background: #27ae60; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #333; }
+        th { color: #888; font-weight: 500; }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+        .badge-success { background: #27ae60; }
+        .badge-danger { background: #e74c3c; }
+        .badge-warning { background: #f39c12; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; color: #888; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; background: #1a1a2e; border: 1px solid #333; border-radius: 5px; color: #fff; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #667eea; }
+        .alert { padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .alert-success { background: rgba(39, 174, 96, 0.2); border: 1px solid #27ae60; }
+        .alert-error { background: rgba(231, 76, 60, 0.2); border: 1px solid #e74c3c; }
+        .progress { height: 8px; background: #333; border-radius: 4px; overflow: hidden; }
+        .progress-bar { height: 100%; background: #667eea; transition: width 0.3s; }
+        .flex { display: flex; gap: 10px; align-items: center; }
+        .mt-20 { margin-top: 20px; }
+        .text-muted { color: #888; }
+        .text-sm { font-size: 12px; }
+    </style>
+</head>
+<body>
+    {{block "content" .}}{{end}}
+</body>
+</html>

@@ -1,0 +1,77 @@
+{{template "base.html" .}}
+{{define "title"}}Settings - mControlPanel{{end}}
+{{define "content"}}
+<div class="sidebar">
+    <h1>mControlPanel</h1>
+    <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/domains">Domains</a>
+        <a href="/databases">Databases</a>
+        <a href="/wordpress">WordPress</a>
+        <a href="/backups">Backups</a>
+        <a href="/services">Services</a>
+        <a href="/settings" class="active">Settings</a>
+        <a href="/profile">Profile</a>
+        <a href="/logout">Logout</a>
+    </nav>
+</div>
+<div class="main">
+    <div class="header">
+        <h2>Settings</h2>
+    </div>
+
+    <div class="card" style="max-width: 600px;">
+        <h3>Server Settings</h3>
+        <form method="POST" action="/settings">
+            <div class="form-group">
+                <label>Server Host</label>
+                <input type="text" name="host" value="{{.config.Server.Host}}">
+            </div>
+            <div class="form-group">
+                <label>Server Port</label>
+                <input type="number" name="port" value="{{.config.Server.Port}}">
+            </div>
+            <div class="form-group">
+                <label>Web Root Directory</label>
+                <input type="text" name="www_root" value="{{.config.Paths.WWWRoot}}">
+            </div>
+            <div class="form-group">
+                <label>Backup Directory</label>
+                <input type="text" name="backup_dir" value="{{.config.Paths.BackupDir}}">
+            </div>
+            <div class="form-group">
+                <label>Default PHP Version</label>
+                <select name="php_version">
+                    {{range .config.PHP.Versions}}
+                    <option value="{{.}}" {{if eq . $.config.PHP.DefaultVersion}}selected{{end}}>PHP {{.}}</option>
+                    {{end}}
+                </select>
+            </div>
+            <button type="submit" class="btn">Save Settings</button>
+        </form>
+    </div>
+
+    <div class="card mt-20" style="max-width: 600px;">
+        <h3>MySQL Settings</h3>
+        <form method="POST" action="/settings">
+            <div class="form-group">
+                <label>MySQL Host</label>
+                <input type="text" name="mysql_host" value="{{.config.Database.MySQLHost}}">
+            </div>
+            <div class="form-group">
+                <label>MySQL Port</label>
+                <input type="number" name="mysql_port" value="{{.config.Database.MySQLPort}}">
+            </div>
+            <div class="form-group">
+                <label>MySQL Root User</label>
+                <input type="text" name="mysql_user" value="{{.config.Database.MySQLUser}}">
+            </div>
+            <div class="form-group">
+                <label>MySQL Root Password</label>
+                <input type="password" name="mysql_pass" placeholder="Leave empty to keep current">
+            </div>
+            <button type="submit" class="btn">Save MySQL Settings</button>
+        </form>
+    </div>
+</div>
+{{end}}

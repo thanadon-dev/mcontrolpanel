@@ -1,0 +1,42 @@
+{{template "base.html" .}}
+{{define "title"}}Add Domain - mControlPanel{{end}}
+{{define "content"}}
+<div class="sidebar">
+    <h1>mControlPanel</h1>
+    <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/domains" class="active">Domains</a>
+        <a href="/databases">Databases</a>
+        <a href="/wordpress">WordPress</a>
+        <a href="/backups">Backups</a>
+        <a href="/services">Services</a>
+        <a href="/settings">Settings</a>
+        <a href="/profile">Profile</a>
+        <a href="/logout">Logout</a>
+    </nav>
+</div>
+<div class="main">
+    <div class="header">
+        <h2>Add Domain</h2>
+        <a href="/domains" class="btn">← Back</a>
+    </div>
+
+    <div class="card" style="max-width: 500px;">
+        <form method="POST" action="/domains">
+            <div class="form-group">
+                <label>Domain Name</label>
+                <input type="text" name="name" placeholder="example.com" required>
+            </div>
+            <div class="form-group">
+                <label>PHP Version</label>
+                <select name="php_version">
+                    {{range .phpVersions}}
+                    <option value="{{.}}">PHP {{.}}</option>
+                    {{end}}
+                </select>
+            </div>
+            <button type="submit" class="btn">Create Domain</button>
+        </form>
+    </div>
+</div>
+{{end}}

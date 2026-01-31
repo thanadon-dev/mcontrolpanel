@@ -1,0 +1,50 @@
+{{template "base.html" .}}
+{{define "title"}}Domains - mControlPanel{{end}}
+{{define "content"}}
+<div class="sidebar">
+    <h1>mControlPanel</h1>
+    <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/domains" class="active">Domains</a>
+        <a href="/databases">Databases</a>
+        <a href="/wordpress">WordPress</a>
+        <a href="/backups">Backups</a>
+        <a href="/services">Services</a>
+        <a href="/settings">Settings</a>
+        <a href="/profile">Profile</a>
+        <a href="/logout">Logout</a>
+    </nav>
+</div>
+<div class="main">
+    <div class="header">
+        <h2>Domains</h2>
+        <a href="/domains/add" class="btn">+ Add Domain</a>
+    </div>
+
+    <div class="card">
+        <table>
+            <thead>
+                <tr><th>Domain</th><th>Document Root</th><th>PHP</th><th>SSL</th><th>Status</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+            {{range .domains}}
+            <tr>
+                <td><strong>{{.Name}}</strong></td>
+                <td class="text-muted text-sm">{{.DocumentRoot}}</td>
+                <td>{{.PHPVersion}}</td>
+                <td>{{if .SSLEnabled}}<span class="badge badge-success">Yes</span>{{else}}<span class="badge badge-warning">No</span>{{end}}</td>
+                <td>{{if .Active}}<span class="badge badge-success">Active</span>{{else}}<span class="badge badge-danger">Inactive</span>{{end}}</td>
+                <td>
+                    <form method="POST" action="/domains/{{.ID}}/delete" style="display:inline" onsubmit="return confirm('Delete this domain?')">
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {{else}}
+            <tr><td colspan="6" class="text-muted">No domains yet. <a href="/domains/add">Create one</a></td></tr>
+            {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+{{end}}

@@ -1,0 +1,101 @@
+{{template "base.html" .}}
+{{define "title"}}Dashboard - mControlPanel{{end}}
+{{define "content"}}
+<div class="sidebar">
+    <h1>mControlPanel</h1>
+    <nav>
+        <a href="/dashboard" class="active">Dashboard</a>
+        <a href="/domains">Domains</a>
+        <a href="/databases">Databases</a>
+        <a href="/wordpress">WordPress</a>
+        <a href="/backups">Backups</a>
+        <a href="/services">Services</a>
+        <a href="/settings">Settings</a>
+        <a href="/profile">Profile</a>
+        <a href="/logout">Logout</a>
+    </nav>
+</div>
+<div class="main">
+    <div class="header">
+        <h2>Dashboard</h2>
+        <span class="text-muted">Welcome, {{.user.Username}}</span>
+    </div>
+
+    <div class="grid">
+        <div class="card stat">
+            <div class="num">{{.stats.domains}}</div>
+            <div class="label">Domains</div>
+        </div>
+        <div class="card stat">
+            <div class="num">{{.stats.databases}}</div>
+            <div class="label">Databases</div>
+        </div>
+        <div class="card stat">
+            <div class="num">{{.stats.wordpress}}</div>
+            <div class="label">WordPress Sites</div>
+        </div>
+        <div class="card stat">
+            <div class="num">{{.stats.backups}}</div>
+            <div class="label">Backups</div>
+        </div>
+    </div>
+
+    <div class="grid" style="grid-template-columns: 1fr 1fr;">
+        <div class="card">
+            <h3>Services</h3>
+            <table>
+                <tr>
+                    <td>Nginx</td>
+                    <td>{{if index .services "nginx"}}<span class="badge badge-success">Running</span>{{else}}<span class="badge badge-danger">Stopped</span>{{end}}</td>
+                </tr>
+                <tr>
+                    <td>MySQL</td>
+                    <td>{{if index .services "mysql"}}<span class="badge badge-success">Running</span>{{else}}<span class="badge badge-danger">Stopped</span>{{end}}</td>
+                </tr>
+                <tr>
+                    <td>PHP-FPM</td>
+                    <td>{{if index .services "php"}}<span class="badge badge-success">Running</span>{{else}}<span class="badge badge-danger">Stopped</span>{{end}}</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="card">
+            <h3>System Resources</h3>
+            <div class="form-group">
+                <label>CPU Usage</label>
+                <div class="progress"><div class="progress-bar" style="width: {{printf "%.0f" .system.cpu_usage}}%"></div></div>
+                <span class="text-sm text-muted">{{printf "%.1f" .system.cpu_usage}}%</span>
+            </div>
+            <div class="form-group">
+                <label>Memory Usage</label>
+                <div class="progress"><div class="progress-bar" style="width: {{printf "%.0f" .system.mem_percent}}%"></div></div>
+                <span class="text-sm text-muted">{{printf "%.1f" .system.mem_percent}}%</span>
+            </div>
+            <div class="form-group">
+                <label>Disk Usage</label>
+                <div class="progress"><div class="progress-bar" style="width: {{printf "%.0f" .system.disk_percent}}%"></div></div>
+                <span class="text-sm text-muted">{{printf "%.1f" .system.disk_percent}}%</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Recent Domains</h3>
+        <table>
+            <thead><tr><th>Domain</th><th>PHP</th><th>SSL</th><th>Status</th></tr></thead>
+            <tbody>
+            {{range .domains}}
+            <tr>
+                <td>{{.Name}}</td>
+                <td>{{.PHPVersion}}</td>
+                <td>{{if .SSLEnabled}}<span class="badge badge-success">Yes</span>{{else}}<span class="badge badge-warning">No</span>{{end}}</td>
+                <td>{{if .Active}}<span class="badge badge-success">Active</span>{{else}}<span class="badge badge-danger">Inactive</span>{{end}}</td>
+            </tr>
+            {{else}}
+            <tr><td colspan="4" class="text-muted">No domains yet</td></tr>
+            {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+{{end}}

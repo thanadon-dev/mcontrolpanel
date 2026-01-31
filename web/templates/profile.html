@@ -1,0 +1,70 @@
+{{template "base.html" .}}
+{{define "title"}}Profile - mControlPanel{{end}}
+{{define "content"}}
+<div class="sidebar">
+    <h1>mControlPanel</h1>
+    <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/domains">Domains</a>
+        <a href="/databases">Databases</a>
+        <a href="/wordpress">WordPress</a>
+        <a href="/backups">Backups</a>
+        <a href="/services">Services</a>
+        <a href="/settings">Settings</a>
+        <a href="/profile" class="active">Profile</a>
+        <a href="/logout">Logout</a>
+    </nav>
+</div>
+<div class="main">
+    <div class="header">
+        <h2>My Profile</h2>
+    </div>
+
+    <div class="grid" style="grid-template-columns: 300px 1fr;">
+        <div class="card" style="text-align: center;">
+            <div style="width:80px;height:80px;background:#667eea;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 15px;font-size:32px;color:#fff;">
+                {{slice .user.Username 0 1 | upper}}
+            </div>
+            <h3>{{.user.Username}}</h3>
+            <p class="text-muted">{{.user.Email}}</p>
+            <p><span class="badge badge-success">{{.user.Role}}</span></p>
+        </div>
+
+        <div>
+            <div class="card">
+                <h3>Update Profile</h3>
+                <form method="POST" action="/profile">
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input type="text" value="{{.user.Username}}" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" name="email" value="{{.user.Email}}">
+                    </div>
+                    <button type="submit" class="btn">Update Profile</button>
+                </form>
+            </div>
+
+            <div class="card mt-20">
+                <h3>Change Password</h3>
+                <form method="POST" action="/profile/password">
+                    <div class="form-group">
+                        <label>Current Password</label>
+                        <input type="password" name="current_password" required>
+                    </div>
+                    <div class="form-group">
+                        <label>New Password</label>
+                        <input type="password" name="new_password" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Confirm Password</label>
+                        <input type="password" name="confirm_password" required>
+                    </div>
+                    <button type="submit" class="btn">Change Password</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}

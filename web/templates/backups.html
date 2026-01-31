@@ -1,0 +1,81 @@
+{{template "base.html" .}}
+{{define "title"}}Backups - mControlPanel{{end}}
+{{define "content"}}
+<div class="sidebar">
+    <h1>mControlPanel</h1>
+    <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/domains">Domains</a>
+        <a href="/databases">Databases</a>
+        <a href="/wordpress">WordPress</a>
+        <a href="/backups" class="active">Backups</a>
+        <a href="/services">Services</a>
+        <a href="/settings">Settings</a>
+        <a href="/profile">Profile</a>
+        <a href="/logout">Logout</a>
+    </nav>
+</div>
+<div class="main">
+    <div class="header">
+        <h2>Backups</h2>
+        <button class="btn" onclick="document.getElementById('createModal').style.display='flex'">+ Create Backup</button>
+    </div>
+
+    <div class="card">
+        <table>
+            <thead>
+                <tr><th>Name</th><th>Type</th><th>Size</th><th>Created</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+            {{range .backups}}
+            <tr>
+                <td><strong>{{.Name}}</strong></td>
+                <td><span class="badge badge-success">{{.Type}}</span></td>
+                <td>{{printf "%.2f" (divf .Size 1048576)}} MB</td>
+                <td class="text-muted">{{.CreatedAt.Format "2006-01-02 15:04"}}</td>
+                <td>
+                    <form method="POST" action="/backups/{{.ID}}/restore" style="display:inline">
+                        <button type="submit" class="btn btn-sm btn-success">Restore</button>
+                    </form>
+                    <form method="POST" action="/backups/{{.ID}}/delete" style="display:inline" onsubmit="return confirm('Delete this backup?')">
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {{else}}
+            <tr><td colspan="5" class="text-muted">No backups yet</td></tr>
+            {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="createModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;z-index:1000;">
+    <div class="card" style="max-width:400px;margin:20px;">
+        <h3>Create Backup</h3>
+        <form method="POST" action="/backups">
+            <div class="form-group">
+                <label>Backup Type</label>
+                <select name="type">
+                    <option value="full">Full (Files + Database)</option>
+                    <option value="files">Files Only</option>
+                    <option value="database">Database Only</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Domain (optional)</label>
+                <select name="domain_id">
+                    <option value="">All Domains</option>
+                    {{range .domains}}
+                    <option value="{{.ID}}">{{.Name}}</option>
+                    {{end}}
+                </select>
+            </div>
+            <div class="flex mt-20">
+                <button type="submit" class="btn">Create Backup</button>
+                <button type="button" class="btn btn-danger" onclick="document.getElementById('createModal').style.display='none'">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+{{end}}

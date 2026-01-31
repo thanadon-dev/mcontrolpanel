@@ -1,0 +1,45 @@
+{{template "base.html" .}}
+{{define "title"}}WordPress - mControlPanel{{end}}
+{{define "content"}}
+<div class="sidebar">
+    <h1>mControlPanel</h1>
+    <nav>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/domains">Domains</a>
+        <a href="/databases">Databases</a>
+        <a href="/wordpress" class="active">WordPress</a>
+        <a href="/backups">Backups</a>
+        <a href="/services">Services</a>
+        <a href="/settings">Settings</a>
+        <a href="/profile">Profile</a>
+        <a href="/logout">Logout</a>
+    </nav>
+</div>
+<div class="main">
+    <div class="header">
+        <h2>WordPress Sites</h2>
+        <a href="/wordpress/install" class="btn">+ Install WordPress</a>
+    </div>
+
+    <div class="grid">
+    {{range .sites}}
+    <div class="card">
+        <h3>{{.Title}}</h3>
+        <p class="text-muted text-sm">{{index $.domainMap .DomainID}}</p>
+        <p class="text-sm">Database: {{.DBName}}</p>
+        <p class="text-sm">Admin: {{.AdminUser}}</p>
+        <div class="mt-20">
+            <a href="http://{{index $.domainMap .DomainID}}/wp-admin" target="_blank" class="btn btn-sm">Admin Panel</a>
+            <form method="POST" action="/wordpress/{{.ID}}/delete" style="display:inline" onsubmit="return confirm('Delete this WordPress site?')">
+                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+            </form>
+        </div>
+    </div>
+    {{else}}
+    <div class="card">
+        <p class="text-muted">No WordPress sites installed. <a href="/wordpress/install">Install one</a></p>
+    </div>
+    {{end}}
+    </div>
+</div>
+{{end}}

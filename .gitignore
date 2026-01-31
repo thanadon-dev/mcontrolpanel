@@ -1,0 +1,40 @@
+# Binaries
+mcontrolpanel
+mcontrolpanel.exe
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Data
+data/
+*.db
+*.db-journal
+*.db-wal
+
+# Config with sensitive data
+config.yaml
+
+# Logs
+logs/
+*.log
+
+# Backups
+backups/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+*_test.go
+coverage.out
+
+# Vendor (optional)
+# vendor/

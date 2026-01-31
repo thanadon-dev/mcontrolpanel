@@ -1,0 +1,45 @@
+# Example configuration file for mControlPanel
+# Copy to config.yaml and customize
+
+server:
+  host: 127.0.0.1
+  port: 8080
+  secret_key: change-this-to-a-random-string
+
+database:
+  path: data/panel.db
+  mysql_host: localhost
+  mysql_port: 3306
+  mysql_user: root
+  mysql_pass: ""
+
+paths:
+  # Linux paths
+  www_root: /var/www
+  backup_dir: /var/backups/mcontrolpanel
+  log_dir: /var/log/mcontrolpanel
+  ssl_dir: /etc/ssl/mcontrolpanel
+  nginx_conf: /etc/nginx/sites-enabled
+  
+  # Windows paths (uncomment if on Windows)
+  # www_root: C:\mcontrolpanel\www
+  # backup_dir: C:\mcontrolpanel\backups
+  # log_dir: C:\mcontrolpanel\logs
+  # ssl_dir: C:\mcontrolpanel\ssl
+  # nginx_conf: C:\nginx\conf\sites-enabled
+
+services:
+  webserver: nginx
+
+php:
+  default_version: "8.2"
+  versions:
+    - "7.4"
+    - "8.0"
+    - "8.1"
+    - "8.2"
+    - "8.3"
+
+backup:
+  retention_days: 7
+  compress: true
