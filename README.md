@@ -5,7 +5,7 @@
 ## ✨ คุณสมบัติ
 
 - **ไฟล์เดียวจบ** - ไม่ต้องติดตั้ง runtime เพิ่มเติม แค่ไฟล์ exe/binary ไฟล์เดียว
-- **ประหยัด RAM** - ใช้แค่ ~15MB (เทียบกับ Python/Node ที่ใช้ 200MB+)
+- **ประหยัด RAM** - ใช้แค่ ~10MB (เทียบกับ Python/Node ที่ใช้ 200MB+)
 - **เร็วมาก** - เริ่มต้นทันที ตอบสนองภายในมิลลิวินาที
 - **ข้ามแพลตฟอร์ม** - ใช้ได้ทั้ง Linux และ Windows
 - **โดเมนไม่จำกัด** - สร้างและจัดการ virtual hosts ได้เท่าที่ต้องการ
@@ -15,12 +15,15 @@
 - **ระบบ Backup** - สำรองข้อมูลทั้งไฟล์และฐานข้อมูล
 - **ควบคุม Services** - Start/Stop/Restart Nginx, MySQL, PHP-FPM
 - **UI ทันสมัย** - หน้าตาสวย ใช้งานง่าย โทนสีเข้ม
+- **🆕 Rate Limiting** - ป้องกัน brute force อัตโนมัติ
+- **🆕 HTTPS Support** - รองรับ SSL/TLS และ Let's Encrypt
+- **🆕 Health Check API** - `/health`, `/ready`, `/live` สำหรับ monitoring
 
 ## 📊 เปรียบเทียบทรัพยากร
 
 | Panel | ภาษา | ขนาด Binary | RAM | เวลาเริ่มต้น |
 |-------|------|-------------|-----|-------------|
-| **mControlPanel** | Go | ~15MB | ~15MB | <1 วินาที |
+| **mControlPanel** | Go | ~5MB (UPX) | ~10MB | <1 วินาที |
 | cPanel | Perl/C | N/A | 500MB+ | 30+ วินาที |
 | Plesk | PHP | N/A | 400MB+ | 20+ วินาที |
 | Python Panel อื่นๆ | Python | 50MB+ deps | 200MB+ | 5+ วินาที |
@@ -29,11 +32,33 @@
 
 ## 🚀 วิธีติดตั้ง
 
-### ⚡ ติดตั้งด่วน (ดาวน์โหลด Binary สำเร็จรูป)
+### ⚡ ติดตั้งด่วน (One-Line Install)
 
-> **หมายเหตุ:** วิธีนี้ต้องรอสร้าง Release ก่อน หรือใช้วิธี Build จาก Source ด้านล่าง
+**Linux:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/thanadon-dev/mcontrolpanel/main/install.sh | sudo bash
+```
 
-### 🔧 Build จาก Source (แนะนำ)
+**หรือดาวน์โหลด Binary:**
+```bash
+# Linux (64-bit)
+curl -Lo mcontrolpanel https://github.com/thanadon-dev/mcontrolpanel/releases/latest/download/mcontrolpanel-linux-amd64
+chmod +x mcontrolpanel
+sudo ./mcontrolpanel --setup
+
+# Linux (ARM64 - Raspberry Pi, etc.)
+curl -Lo mcontrolpanel https://github.com/thanadon-dev/mcontrolpanel/releases/latest/download/mcontrolpanel-linux-arm64
+chmod +x mcontrolpanel
+sudo ./mcontrolpanel --setup
+```
+
+**Windows (PowerShell):**
+```powershell
+Invoke-WebRequest -Uri "https://github.com/thanadon-dev/mcontrolpanel/releases/latest/download/mcontrolpanel-windows-amd64.exe" -OutFile "mcontrolpanel.exe"
+.\mcontrolpanel.exe --setup
+```
+
+### 🔧 Build จาก Source
 
 #### Linux (Ubuntu/Debian)
 
@@ -115,19 +140,51 @@ go build -ldflags="-s -w" -o mcontrolpanel.exe .
 
 ---
 
+## 🔄 ติดตั้งเป็น Service (แนะนำ)
+
+### Linux (systemd)
+
+```bash
+# ติดตั้ง service file
+sudo cp mcontrolpanel.service /etc/systemd/system/
+sudo systemctl daemon-reload
+
+# เปิดใช้งานและเริ่ม
+sudo systemctl enable mcontrolpanel
+sudo systemctl start mcontrolpanel
+
+# ตรวจสอบสถานะ
+sudo systemctl status mcontrolpanel
+```
+
+### ลบออก (Uninstall)
+
+```bash
+# Linux
+curl -fsSL https://raw.githubusercontent.com/thanadon-dev/mcontrolpanel/main/uninstall.sh | sudo bash
+
+# หรือ
+sudo ./uninstall.sh
+```
+
+---
+
 ## 📁 โครงสร้างโปรเจค
 
 ```
 mcontrolpanel/
-├── main.go                      # จุดเริ่มต้นโปรแกรม
+├── main.go                      # จุดเริ่มต้นโปรแกรม + GC optimization
 ├── go.mod                       # Go modules
 ├── config.example.yaml          # ตัวอย่าง config
+├── install.sh                   # Script ติดตั้งอัตโนมัติ
+├── uninstall.sh                 # Script ลบออก
+├── mcontrolpanel.service        # Systemd service file
 ├── internal/
 │   ├── config/config.go         # จัดการ configuration
-│   ├── database/database.go     # SQLite database และ models
-│   ├── server/server.go         # HTTP server setup
-│   ├── handlers/handlers.go     # จัดการ requests ทั้งหมด
-│   └── middleware/middleware.go # Auth middleware
+│   ├── database/database.go     # SQLite (WAL mode) และ models
+│   ├── server/server.go         # HTTP/HTTPS server
+│   ├── handlers/handlers.go     # Request handlers + Health checks
+│   └── middleware/middleware.go # Auth + Rate Limiting
 └── web/
     ├── templates/               # HTML templates
     └── static/                  # CSS/JS assets
@@ -141,9 +198,12 @@ mcontrolpanel/
 
 ```yaml
 server:
-  host: 127.0.0.1
+  host: 0.0.0.0
   port: 8080
   secret_key: เปลี่ยนเป็น-string-สุ่มของคุณ
+  enable_https: false
+  cert_file: "/etc/ssl/mcontrolpanel/cert.pem"
+  key_file: "/etc/ssl/mcontrolpanel/key.pem"
 
 database:
   path: data/panel.db
@@ -160,6 +220,11 @@ paths:
 php:
   default_version: "8.2"
   versions: ["7.4", "8.0", "8.1", "8.2", "8.3"]
+
+rate_limit:
+  enabled: true
+  requests_per_minute: 60
+  login_attempts: 5
 ```
 
 ---
@@ -173,8 +238,40 @@ Options:
   --config string   พาธไปยังไฟล์ config (ค่าเริ่มต้น "config.yaml")
   --host string     กำหนด host แทนค่าใน config
   --port int        กำหนด port แทนค่าใน config
+  --https           เปิดใช้งาน HTTPS
+  --cert string     พาธไปยังไฟล์ SSL certificate
+  --key string      พาธไปยังไฟล์ SSL private key
   --setup           รัน setup wizard ครั้งแรก
   --version         แสดงเวอร์ชัน
+```
+
+---
+
+## 💓 Health Check API
+
+mControlPanel มี endpoints สำหรับ monitoring:
+
+| Endpoint | ใช้สำหรับ | ต้อง Auth |
+|----------|----------|-----------|
+| `GET /health` | Health check แบบละเอียด | ❌ |
+| `GET /ready` | Readiness probe (K8s) | ❌ |
+| `GET /live` | Liveness probe (K8s) | ❌ |
+| `GET /api/health` | Health check (ต้อง login) | ✅ |
+
+**ตัวอย่าง Response:**
+```json
+{
+  "status": "healthy",
+  "timestamp": "2026-02-01T10:30:00Z",
+  "version": "1.0.0",
+  "checks": {
+    "database": "ok",
+    "services": true,
+    "memory": {"used_percent": 45.2, "ok": true},
+    "disk": {"used_percent": 60.1, "ok": true}
+  },
+  "uptime": "24h30m15s"
+}
 ```
 
 ---
@@ -187,10 +284,22 @@ Options:
 
 ---
 
-## 🔒 หมายเหตุด้านความปลอดภัย
+## 🔒 ความปลอดภัย
 
+### Rate Limiting (ป้องกัน Brute Force)
+- API ทั่วไป: 60 requests/นาที
+- Login: 5 attempts/นาที
+- เมื่อเกินจะได้ HTTP 429 Too Many Requests
+
+### HTTPS
+```bash
+# ใช้กับ Let's Encrypt
+sudo ./mcontrolpanel --https --cert /etc/letsencrypt/live/yourdomain/fullchain.pem --key /etc/letsencrypt/live/yourdomain/privkey.pem
+```
+
+### หมายเหตุด้านความปลอดภัย
 - ⚠️ เปลี่ยน `secret_key` ในไฟล์ config ก่อนใช้งานจริง
-- 🔐 ควรรันผ่าน reverse proxy (Nginx) พร้อม HTTPS
+- 🔐 ใช้ HTTPS ใน production
 - 🛡️ จำกัดการเข้าถึง panel เฉพาะ IP ที่เชื่อถือได้
 - 🔑 ใช้รหัสผ่านที่แข็งแรงสำหรับ admin
 

@@ -1,0 +1,36 @@
+[Unit]
+Description=mControlPanel - Lightweight Web Hosting Control Panel
+Documentation=https://github.com/thanadon-dev/mcontrolpanel
+After=network.target mysql.service nginx.service
+Wants=mysql.service nginx.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/mcontrolpanel
+ExecStart=/usr/local/bin/mcontrolpanel --config /etc/mcontrolpanel/config.yaml
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/mcontrolpanel/mcontrolpanel.log
+StandardError=append:/var/log/mcontrolpanel/error.log
+
+# Security hardening
+NoNewPrivileges=false
+ProtectSystem=false
+ProtectHome=false
+PrivateTmp=true
+
+# Resource limits - จำกัดการใช้ทรัพยากร
+LimitNOFILE=65535
+MemoryMax=128M
+CPUQuota=100%
+
+# Environment
+Environment="GIN_MODE=release"
+Environment="GOGC=50"
+Environment="GOMEMLIMIT=100MiB"
+
+[Install]
+WantedBy=multi-user.target

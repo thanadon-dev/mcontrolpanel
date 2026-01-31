@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"syscall"
 
 	"mcontrolpanel/internal/config"
@@ -22,6 +23,12 @@ var (
 	buildTime = "unknown"
 )
 
+func init() {
+	// ตั้งค่า GC ให้ประหยัด memory
+	debug.SetGCPercent(50) // GC บ่อยขึ้น ประหยัด RAM
+	debug.SetMemoryLimit(100 * 1024 * 1024) // จำกัด 100MB
+}
+
 func main() {
 	// Command line flags
 	configPath := flag.String("config", "config.yaml", "Path to configuration file")
@@ -29,6 +36,9 @@ func main() {
 	port := flag.Int("port", 0, "Override port number")
 	showVersion := flag.Bool("version", false, "Show version information")
 	setup := flag.Bool("setup", false, "Run initial setup")
+	enableHTTPS := flag.Bool("https", false, "Enable HTTPS")
+	certFile := flag.String("cert", "", "Path to SSL certificate file")
+	keyFile := flag.String("key", "", "Path to SSL key file")
 	flag.Parse()
 
 	// Show version
@@ -53,6 +63,15 @@ func main() {
 	}
 	if *port != 0 {
 		cfg.Server.Port = *port
+	}
+	if *enableHTTPS {
+		cfg.Server.EnableHTTPS = true
+	}
+	if *certFile != "" {
+		cfg.Server.CertFile = *certFile
+	}
+	if *keyFile != "" {
+		cfg.Server.KeyFile = *keyFile
 	}
 
 	// Initialize database
@@ -84,9 +103,17 @@ func main() {
 
 	// Start server
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
-	log.Printf("Starting mControlPanel on http://%s", addr)
-	if err := srv.Run(addr); err != nil {
-		log.Fatalf("Server error: %v", err)
+	
+	if cfg.Server.EnableHTTPS && cfg.Server.CertFile != "" && cfg.Server.KeyFile != "" {
+		log.Printf("Starting mControlPanel on https://%s", addr)
+		if err := srv.RunTLS(addr, cfg.Server.CertFile, cfg.Server.KeyFile); err != nil {
+			log.Fatalf("Server error: %v", err)
+		}
+	} else {
+		log.Printf("Starting mControlPanel on http://%s", addr)
+		if err := srv.Run(addr); err != nil {
+			log.Fatalf("Server error: %v", err)
+		}
 	}
 }
 

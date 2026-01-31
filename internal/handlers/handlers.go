@@ -590,3 +590,87 @@ func generatePassword(length int) string {
 	}
 	return string(b)
 }
+
+// Health Check API - สำหรับ monitoring
+func (h *Handler) HealthCheck(c *gin.Context) {
+	// Check database
+	dbStatus := "ok"
+	if err := h.db.Ping(); err != nil {
+		dbStatus = "error"
+	}
+
+	// Check services
+	services := h.getServicesStatus()
+	servicesOK := true
+	for _, svc := range services {
+		if !svc["running"].(bool) {
+			servicesOK = false
+			break
+		}
+	}
+
+	// Get system info
+	memInfo, _ := mem.VirtualMemory()
+	diskInfo, _ := disk.Usage("/")
+
+	status := "healthy"
+	httpCode := http.StatusOK
+
+	if dbStatus != "ok" || !servicesOK {
+		status = "degraded"
+		httpCode = http.StatusServiceUnavailable
+	}
+
+	// Critical thresholds
+	if memInfo != nil && memInfo.UsedPercent > 95 {
+		status = "critical"
+		httpCode = http.StatusServiceUnavailable
+	}
+	if diskInfo != nil && diskInfo.UsedPercent > 95 {
+		status = "critical"
+		httpCode = http.StatusServiceUnavailable
+	}
+
+	c.JSON(httpCode, gin.H{
+		"status":    status,
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+		"version":   "1.0.0",
+		"checks": gin.H{
+			"database": dbStatus,
+			"services": servicesOK,
+			"memory": gin.H{
+				"used_percent": memInfo.UsedPercent,
+				"ok":           memInfo.UsedPercent < 90,
+			},
+			"disk": gin.H{
+				"used_percent": diskInfo.UsedPercent,
+				"ok":           diskInfo.UsedPercent < 90,
+			},
+		},
+		"uptime": time.Since(startTime).String(),
+	})
+}
+
+// Readiness probe - ตรวจสอบว่าพร้อมรับ traffic
+func (h *Handler) ReadinessCheck(c *gin.Context) {
+	if err := h.db.Ping(); err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"status": "not_ready",
+			"error":  "database not available",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": "ready",
+	})
+}
+
+// Liveness probe - ตรวจสอบว่ายังทำงานอยู่
+func (h *Handler) LivenessCheck(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"status": "alive",
+	})
+}
+
+var startTime = time.Now()

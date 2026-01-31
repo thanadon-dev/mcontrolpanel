@@ -8,18 +8,22 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig   `yaml:"server"`
-	Database DatabaseConfig `yaml:"database"`
-	Paths    PathsConfig    `yaml:"paths"`
-	Services ServicesConfig `yaml:"services"`
-	PHP      PHPConfig      `yaml:"php"`
-	Backup   BackupConfig   `yaml:"backup"`
+	Server    ServerConfig    `yaml:"server"`
+	Database  DatabaseConfig  `yaml:"database"`
+	Paths     PathsConfig     `yaml:"paths"`
+	Services  ServicesConfig  `yaml:"services"`
+	PHP       PHPConfig       `yaml:"php"`
+	Backup    BackupConfig    `yaml:"backup"`
+	RateLimit RateLimitConfig `yaml:"rate_limit"`
 }
 
 type ServerConfig struct {
-	Host      string `yaml:"host"`
-	Port      int    `yaml:"port"`
-	SecretKey string `yaml:"secret_key"`
+	Host        string `yaml:"host"`
+	Port        int    `yaml:"port"`
+	SecretKey   string `yaml:"secret_key"`
+	EnableHTTPS bool   `yaml:"enable_https"`
+	CertFile    string `yaml:"cert_file"`
+	KeyFile     string `yaml:"key_file"`
 }
 
 type DatabaseConfig struct {
@@ -52,6 +56,12 @@ type BackupConfig struct {
 	Compress      bool `yaml:"compress"`
 }
 
+type RateLimitConfig struct {
+	Enabled           bool `yaml:"enabled"`
+	RequestsPerMinute int  `yaml:"requests_per_minute"`
+	LoginAttempts     int  `yaml:"login_attempts"`
+}
+
 func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -69,9 +79,12 @@ func Load(path string) (*Config, error) {
 func Default() *Config {
 	cfg := &Config{
 		Server: ServerConfig{
-			Host:      "127.0.0.1",
-			Port:      8080,
-			SecretKey: "change-me-in-production",
+			Host:        "127.0.0.1",
+			Port:        8080,
+			SecretKey:   "change-me-in-production",
+			EnableHTTPS: false,
+			CertFile:    "",
+			KeyFile:     "",
 		},
 		Database: DatabaseConfig{
 			Path:      "data/panel.db",
@@ -90,6 +103,11 @@ func Default() *Config {
 		Backup: BackupConfig{
 			RetentionDays: 7,
 			Compress:      true,
+		},
+		RateLimit: RateLimitConfig{
+			Enabled:           true,
+			RequestsPerMinute: 60,
+			LoginAttempts:     5,
 		},
 	}
 
@@ -113,6 +131,7 @@ func Default() *Config {
 	}
 
 	return cfg
+}
 }
 
 func (c *Config) Save(path string) error {

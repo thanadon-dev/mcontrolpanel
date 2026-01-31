@@ -23,18 +23,23 @@ jobs:
           - goos: linux
             goarch: amd64
             name: mcontrolpanel-linux-amd64
+            upx: true
           - goos: linux
             goarch: arm64
             name: mcontrolpanel-linux-arm64
+            upx: false
           - goos: windows
             goarch: amd64
             name: mcontrolpanel-windows-amd64.exe
+            upx: true
           - goos: darwin
             goarch: amd64
             name: mcontrolpanel-darwin-amd64
+            upx: false
           - goos: darwin
             goarch: arm64
             name: mcontrolpanel-darwin-arm64
+            upx: false
 
     steps:
       - name: Checkout code
@@ -45,13 +50,24 @@ jobs:
         with:
           go-version: '1.21'
 
+      - name: Install UPX
+        if: matrix.upx
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y upx
+
       - name: Build
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0
         run: |
-          go build -ldflags="-s -w -X main.Version=${{ github.ref_name }}" -o ${{ matrix.name }} .
+          go build -ldflags="-s -w -X main.version=${{ github.ref_name }} -X main.buildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o ${{ matrix.name }} .
+
+      - name: Compress with UPX
+        if: matrix.upx
+        run: |
+          upx --best --lzma ${{ matrix.name }} || true
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -80,30 +96,45 @@ jobs:
           body: |
             ## 🚀 mControlPanel ${{ github.ref_name || github.event.inputs.version }}
             
-            ### ดาวน์โหลด
+            ### ✨ คุณสมบัติใหม่
+            - ⚡ Rate Limiting - ป้องกัน brute force
+            - 🔒 HTTPS Support - รองรับ Let's Encrypt
+            - 💓 Health Check API - `/health`, `/ready`, `/live`
+            - 🗜️ UPX Compressed - ลดขนาดไฟล์ ~60%
+            - 🧠 Memory Optimized - ใช้ RAM น้อยลง
             
-            | แพลตฟอร์ม | ไฟล์ |
-            |-----------|------|
-            | Linux (64-bit) | `mcontrolpanel-linux-amd64` |
-            | Linux (ARM64) | `mcontrolpanel-linux-arm64` |
-            | Windows (64-bit) | `mcontrolpanel-windows-amd64.exe` |
-            | macOS (Intel) | `mcontrolpanel-darwin-amd64` |
-            | macOS (Apple Silicon) | `mcontrolpanel-darwin-arm64` |
+            ### 📥 ดาวน์โหลด
             
-            ### วิธีติดตั้ง
+            | แพลตฟอร์ม | ไฟล์ | ขนาด |
+            |-----------|------|------|
+            | Linux (64-bit) | `mcontrolpanel-linux-amd64` | ~5MB |
+            | Linux (ARM64) | `mcontrolpanel-linux-arm64` | ~15MB |
+            | Windows (64-bit) | `mcontrolpanel-windows-amd64.exe` | ~5MB |
+            | macOS (Intel) | `mcontrolpanel-darwin-amd64` | ~15MB |
+            | macOS (Apple Silicon) | `mcontrolpanel-darwin-arm64` | ~15MB |
             
-            **Linux:**
+            ### 🚀 ติดตั้งด่วน (Linux)
+            
             ```bash
+            # วิธีที่ 1: One-Line Install
+            curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/install.sh | sudo bash
+            
+            # วิธีที่ 2: ดาวน์โหลด Binary
             curl -Lo mcontrolpanel https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name || github.event.inputs.version }}/mcontrolpanel-linux-amd64
             chmod +x mcontrolpanel
             sudo ./mcontrolpanel --setup
             ```
             
-            **Windows:**
+            ### 🖥️ ติดตั้ง (Windows)
+            
             ```powershell
             Invoke-WebRequest -Uri "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name || github.event.inputs.version }}/mcontrolpanel-windows-amd64.exe" -OutFile "mcontrolpanel.exe"
             .\mcontrolpanel.exe --setup
             ```
+            
+            ### 📖 เอกสาร
+            
+            ดูเพิ่มเติมที่ [README.md](https://github.com/${{ github.repository }})
           files: ./binaries/*
           draft: false
           prerelease: false
