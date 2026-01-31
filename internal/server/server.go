@@ -125,6 +125,15 @@ func (s *Server) setupRoutes() {
 		auth.GET("/profile", h.ProfilePage)
 		auth.POST("/profile", h.ProfileUpdate)
 		auth.POST("/profile/password", h.PasswordChange)
+
+		// Resource Monitoring
+		auth.GET("/monitoring", h.MonitoringPage)
+
+		// SSL Management
+		auth.GET("/ssl", h.SSLPage)
+		auth.POST("/ssl/issue", h.SSLIssue)
+		auth.POST("/ssl/renew/:domain", h.SSLRenew)
+		auth.POST("/ssl/revoke/:domain", h.SSLRevoke)
 	}
 
 	// API routes
@@ -136,7 +145,15 @@ func (s *Server) setupRoutes() {
 		api.GET("/services", h.APIServices)
 		api.POST("/services/:name/:action", h.APIServiceAction)
 		api.GET("/health", h.HealthCheck) // Health check ที่ต้อง auth
+
+		// Resource Monitoring API
+		api.GET("/resource/history", h.APIResourceHistory)
+		api.GET("/resource/realtime", h.APIResourceRealtime)
 	}
+
+	// Start resource monitoring
+	handlers.StartResourceMonitoring()
+	handlers.StartAutoRenew()
 }
 
 func (s *Server) Run(addr string) error {

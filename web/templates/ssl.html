@@ -1,0 +1,311 @@
+{{template "base.html" .}}
+{{define "title"}}SSL Certificates{{end}}
+{{define "content"}}
+<div class="container">
+    <h1>🔒 SSL Certificates (Let's Encrypt)</h1>
+    
+    {{if .error}}
+    <div class="alert alert-error">❌ {{.error}}</div>
+    {{end}}
+    
+    {{if .success}}
+    <div class="alert alert-success">✅ ดำเนินการสำเร็จ!</div>
+    {{end}}
+    
+    <!-- Issue New Certificate -->
+    <div class="card">
+        <h2>📜 ขอ SSL Certificate ใหม่</h2>
+        <form action="/ssl/issue" method="POST">
+            <div class="form-group">
+                <label>เลือก Domain:</label>
+                <select name="domain" required>
+                    <option value="">-- เลือก Domain --</option>
+                    {{range .domains}}
+                    {{if not .SSLEnabled}}
+                    <option value="{{.Name}}">{{.Name}}</option>
+                    {{end}}
+                    {{end}}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Email (สำหรับแจ้งเตือน):</label>
+                <input type="email" name="email" required placeholder="admin@example.com">
+            </div>
+            <button type="submit" class="btn btn-success">🚀 ขอ Certificate</button>
+        </form>
+        
+        <div class="info-box">
+            <h4>📋 ข้อกำหนด:</h4>
+            <ul>
+                <li>Domain ต้อง point มาที่ server นี้แล้ว</li>
+                <li>Port 80 ต้องเปิดใช้งาน</li>
+                <li>ต้องติดตั้ง certbot บน server</li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- SSL Status -->
+    <div class="card">
+        <h2>📊 สถานะ SSL ทั้งหมด</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Domain</th>
+                    <th>สถานะ</th>
+                    <th>หมดอายุ</th>
+                    <th>เหลือ</th>
+                    <th>Issuer</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .domains}}
+                <tr>
+                    <td>
+                        {{if .SSLEnabled}}
+                        <a href="https://{{.Name}}" target="_blank">🔒 {{.Name}}</a>
+                        {{else}}
+                        <a href="http://{{.Name}}" target="_blank">⚠️ {{.Name}}</a>
+                        {{end}}
+                    </td>
+                    <td>
+                        {{if .SSLEnabled}}
+                        <span class="badge badge-success">✅ Active</span>
+                        {{else}}
+                        <span class="badge badge-warning">❌ No SSL</span>
+                        {{end}}
+                    </td>
+                    <td>
+                        {{with index $.sslStatus .Name}}
+                        {{if .expires}}{{.expires}}{{else}}-{{end}}
+                        {{end}}
+                    </td>
+                    <td>
+                        {{with index $.sslStatus .Name}}
+                        {{if .days_left}}
+                        <span class="{{if lt .days_left 30}}text-warning{{end}}{{if lt .days_left 7}}text-danger{{end}}">
+                            {{.days_left}} วัน
+                        </span>
+                        {{else}}-{{end}}
+                        {{end}}
+                    </td>
+                    <td>
+                        {{with index $.sslStatus .Name}}
+                        {{if .issuer}}Let's Encrypt{{else}}-{{end}}
+                        {{end}}
+                    </td>
+                    <td>
+                        {{if .SSLEnabled}}
+                        <form action="/ssl/renew/{{.Name}}" method="POST" style="display:inline;">
+                            <button type="submit" class="btn btn-small btn-primary">🔄 Renew</button>
+                        </form>
+                        <form action="/ssl/revoke/{{.Name}}" method="POST" style="display:inline;" onsubmit="return confirm('ยืนยันการลบ SSL?');">
+                            <button type="submit" class="btn btn-small btn-danger">🗑️ Revoke</button>
+                        </form>
+                        {{else}}
+                        <span class="text-muted">-</span>
+                        {{end}}
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Auto Renew Info -->
+    <div class="card">
+        <h2>🔄 Auto Renew</h2>
+        <p>ระบบจะตรวจสอบและต่ออายุ Certificate อัตโนมัติทุกวัน</p>
+        <p>Certificate ที่จะหมดอายุภายใน 30 วัน จะถูก renew อัตโนมัติ</p>
+        
+        <div class="code-block">
+            <code># ตรวจสอบ auto-renew ด้วยตนเอง
+sudo certbot renew --dry-run</code>
+        </div>
+    </div>
+    
+    <!-- Install Certbot -->
+    <div class="card">
+        <h2>📦 ติดตั้ง Certbot</h2>
+        <p>หากยังไม่ได้ติดตั้ง certbot:</p>
+        
+        <div class="code-block">
+            <code># Ubuntu/Debian
+sudo apt update
+sudo apt install certbot python3-certbot-nginx
+
+# CentOS/RHEL
+sudo dnf install certbot python3-certbot-nginx</code>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    background: #2a2a2a;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.card h2 {
+    margin-bottom: 20px;
+    color: #fff;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: #ccc;
+}
+
+.form-group input, .form-group select {
+    width: 100%;
+    max-width: 400px;
+    padding: 10px;
+    background: #1a1a1a;
+    border: 1px solid #3a3a3a;
+    border-radius: 8px;
+    color: #fff;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: opacity 0.3s;
+}
+
+.btn:hover {
+    opacity: 0.8;
+}
+
+.btn-success {
+    background: #4CAF50;
+    color: #fff;
+}
+
+.btn-primary {
+    background: #2196F3;
+    color: #fff;
+}
+
+.btn-danger {
+    background: #f44336;
+    color: #fff;
+}
+
+.btn-small {
+    padding: 5px 10px;
+    font-size: 12px;
+}
+
+.info-box {
+    background: #1a1a1a;
+    border-left: 4px solid #2196F3;
+    padding: 15px;
+    margin-top: 20px;
+    border-radius: 0 8px 8px 0;
+}
+
+.info-box h4 {
+    margin-bottom: 10px;
+    color: #2196F3;
+}
+
+.info-box ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.info-box li {
+    margin-bottom: 5px;
+    color: #ccc;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #3a3a3a;
+}
+
+th {
+    background: #1a1a1a;
+    color: #fff;
+}
+
+td a {
+    color: #4CAF50;
+    text-decoration: none;
+}
+
+.badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.badge-success {
+    background: #4CAF50;
+    color: #fff;
+}
+
+.badge-warning {
+    background: #FF9800;
+    color: #fff;
+}
+
+.text-warning {
+    color: #FF9800;
+}
+
+.text-danger {
+    color: #f44336;
+}
+
+.text-muted {
+    color: #666;
+}
+
+.code-block {
+    background: #1a1a1a;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 10px;
+    overflow-x: auto;
+}
+
+.code-block code {
+    color: #4CAF50;
+    white-space: pre;
+}
+
+.alert {
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.alert-error {
+    background: rgba(244, 67, 54, 0.2);
+    border: 1px solid #f44336;
+    color: #f44336;
+}
+
+.alert-success {
+    background: rgba(76, 175, 80, 0.2);
+    border: 1px solid #4CAF50;
+    color: #4CAF50;
+}
+</style>
+{{end}}

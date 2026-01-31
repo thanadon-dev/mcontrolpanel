@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -674,3 +675,420 @@ func (h *Handler) LivenessCheck(c *gin.Context) {
 }
 
 var startTime = time.Now()
+
+// ==================== Resource Monitoring ====================
+
+// ResourceHistory - เก็บประวัติ resource usage
+type ResourceHistory struct {
+	Timestamp   time.Time `json:"timestamp"`
+	CPUPercent  float64   `json:"cpu_percent"`
+	MemPercent  float64   `json:"mem_percent"`
+	DiskPercent float64   `json:"disk_percent"`
+	NetIn       uint64    `json:"net_in"`
+	NetOut      uint64    `json:"net_out"`
+}
+
+var (
+	resourceHistory     []ResourceHistory
+	resourceHistoryLock sync.Mutex
+	monitoringStarted   bool
+)
+
+// StartResourceMonitoring - เริ่มเก็บข้อมูล resource
+func StartResourceMonitoring() {
+	if monitoringStarted {
+		return
+	}
+	monitoringStarted = true
+
+	go func() {
+		ticker := time.NewTicker(10 * time.Second) // เก็บทุก 10 วินาที
+		for range ticker.C {
+			collectResourceData()
+		}
+	}()
+}
+
+func collectResourceData() {
+	cpuPercent, _ := cpu.Percent(time.Second, false)
+	memInfo, _ := mem.VirtualMemory()
+	diskInfo, _ := disk.Usage("/")
+
+	cpuUsage := 0.0
+	if len(cpuPercent) > 0 {
+		cpuUsage = cpuPercent[0]
+	}
+
+	record := ResourceHistory{
+		Timestamp:   time.Now(),
+		CPUPercent:  cpuUsage,
+		MemPercent:  memInfo.UsedPercent,
+		DiskPercent: diskInfo.UsedPercent,
+	}
+
+	resourceHistoryLock.Lock()
+	resourceHistory = append(resourceHistory, record)
+	// เก็บแค่ 1 ชั่วโมง (360 records @ 10s interval)
+	if len(resourceHistory) > 360 {
+		resourceHistory = resourceHistory[1:]
+	}
+	resourceHistoryLock.Unlock()
+}
+
+// MonitoringPage - หน้า Resource Monitoring
+func (h *Handler) MonitoringPage(c *gin.Context) {
+	user := c.MustGet("user").(*database.User)
+
+	c.HTML(http.StatusOK, "monitoring.html", gin.H{
+		"user": user,
+	})
+}
+
+// APIResourceHistory - API สำหรับดึงประวัติ resource
+func (h *Handler) APIResourceHistory(c *gin.Context) {
+	period := c.DefaultQuery("period", "1h") // 5m, 15m, 30m, 1h
+
+	resourceHistoryLock.Lock()
+	defer resourceHistoryLock.Unlock()
+
+	var filtered []ResourceHistory
+	var cutoff time.Time
+
+	switch period {
+	case "5m":
+		cutoff = time.Now().Add(-5 * time.Minute)
+	case "15m":
+		cutoff = time.Now().Add(-15 * time.Minute)
+	case "30m":
+		cutoff = time.Now().Add(-30 * time.Minute)
+	default:
+		cutoff = time.Now().Add(-1 * time.Hour)
+	}
+
+	for _, r := range resourceHistory {
+		if r.Timestamp.After(cutoff) {
+			filtered = append(filtered, r)
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"period":  period,
+		"data":    filtered,
+		"current": h.getSystemInfo(),
+	})
+}
+
+// APIResourceRealtime - API สำหรับ realtime data
+func (h *Handler) APIResourceRealtime(c *gin.Context) {
+	cpuPercent, _ := cpu.Percent(time.Second, false)
+	memInfo, _ := mem.VirtualMemory()
+	diskInfo, _ := disk.Usage("/")
+
+	cpuUsage := 0.0
+	if len(cpuPercent) > 0 {
+		cpuUsage = cpuPercent[0]
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"timestamp":    time.Now().UTC().Format(time.RFC3339),
+		"cpu_percent":  cpuUsage,
+		"cpu_cores":    runtime.NumCPU(),
+		"mem_total":    memInfo.Total,
+		"mem_used":     memInfo.Used,
+		"mem_free":     memInfo.Free,
+		"mem_percent":  memInfo.UsedPercent,
+		"disk_total":   diskInfo.Total,
+		"disk_used":    diskInfo.Used,
+		"disk_free":    diskInfo.Free,
+		"disk_percent": diskInfo.UsedPercent,
+		"uptime":       time.Since(startTime).String(),
+	})
+}
+
+// ==================== Auto SSL (Let's Encrypt) ====================
+
+// SSLPage - หน้าจัดการ SSL
+func (h *Handler) SSLPage(c *gin.Context) {
+	user := c.MustGet("user").(*database.User)
+	domains, _ := h.db.GetAllDomains()
+
+	// ดึงสถานะ SSL ของแต่ละ domain
+	sslStatus := make(map[string]gin.H)
+	for _, d := range domains {
+		certPath := filepath.Join(h.config.Paths.SSLDir, d.Name, "fullchain.pem")
+		keyPath := filepath.Join(h.config.Paths.SSLDir, d.Name, "privkey.pem")
+
+		status := gin.H{
+			"enabled":    false,
+			"expires":    "",
+			"issuer":     "",
+			"auto_renew": false,
+		}
+
+		if _, err := os.Stat(certPath); err == nil {
+			status["enabled"] = true
+			// ดึงข้อมูล certificate
+			if certInfo, err := getCertificateInfo(certPath); err == nil {
+				status["expires"] = certInfo["expires"]
+				status["issuer"] = certInfo["issuer"]
+				status["days_left"] = certInfo["days_left"]
+			}
+		}
+
+		sslStatus[d.Name] = status
+		_ = keyPath // suppress unused warning
+	}
+
+	c.HTML(http.StatusOK, "ssl.html", gin.H{
+		"user":      user,
+		"domains":   domains,
+		"sslStatus": sslStatus,
+	})
+}
+
+// SSLIssue - ขอ SSL Certificate จาก Let's Encrypt
+func (h *Handler) SSLIssue(c *gin.Context) {
+	domain := c.PostForm("domain")
+	email := c.PostForm("email")
+
+	if domain == "" || email == "" {
+		c.Redirect(http.StatusFound, "/ssl?error=domain_and_email_required")
+		return
+	}
+
+	// สร้างโฟลเดอร์ SSL
+	sslDir := filepath.Join(h.config.Paths.SSLDir, domain)
+	os.MkdirAll(sslDir, 0755)
+
+	// ใช้ certbot ขอ certificate
+	err := h.issueLetsEncrypt(domain, email)
+	if err != nil {
+		c.Redirect(http.StatusFound, "/ssl?error="+err.Error())
+		return
+	}
+
+	// อัพเดท Nginx config เพื่อใช้ SSL
+	h.updateNginxSSL(domain)
+
+	// อัพเดท database
+	h.db.UpdateDomainSSL(domain, true)
+
+	c.Redirect(http.StatusFound, "/ssl?success=ssl_issued")
+}
+
+// SSLRenew - ต่ออายุ SSL Certificate
+func (h *Handler) SSLRenew(c *gin.Context) {
+	domain := c.Param("domain")
+
+	err := h.renewLetsEncrypt(domain)
+	if err != nil {
+		c.Redirect(http.StatusFound, "/ssl?error="+err.Error())
+		return
+	}
+
+	c.Redirect(http.StatusFound, "/ssl?success=ssl_renewed")
+}
+
+// SSLRevoke - ยกเลิก SSL Certificate
+func (h *Handler) SSLRevoke(c *gin.Context) {
+	domain := c.Param("domain")
+
+	// ลบ certificate files
+	sslDir := filepath.Join(h.config.Paths.SSLDir, domain)
+	os.RemoveAll(sslDir)
+
+	// อัพเดท Nginx config กลับเป็น HTTP
+	h.updateNginxNoSSL(domain)
+
+	// อัพเดท database
+	h.db.UpdateDomainSSL(domain, false)
+
+	c.Redirect(http.StatusFound, "/ssl?success=ssl_revoked")
+}
+
+// issueLetsEncrypt - ขอ certificate จาก Let's Encrypt
+func (h *Handler) issueLetsEncrypt(domain, email string) error {
+	webroot := filepath.Join(h.config.Paths.WWWRoot, domain)
+	sslDir := filepath.Join(h.config.Paths.SSLDir, domain)
+
+	// ใช้ certbot webroot mode
+	cmd := exec.Command("certbot", "certonly",
+		"--webroot",
+		"--webroot-path", webroot,
+		"--email", email,
+		"--agree-tos",
+		"--no-eff-email",
+		"--cert-path", filepath.Join(sslDir, "cert.pem"),
+		"--key-path", filepath.Join(sslDir, "privkey.pem"),
+		"--fullchain-path", filepath.Join(sslDir, "fullchain.pem"),
+		"-d", domain,
+	)
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		// ลอง standalone mode ถ้า webroot ไม่ได้
+		cmd2 := exec.Command("certbot", "certonly",
+			"--standalone",
+			"--email", email,
+			"--agree-tos",
+			"--no-eff-email",
+			"--cert-path", filepath.Join(sslDir, "cert.pem"),
+			"--key-path", filepath.Join(sslDir, "privkey.pem"),
+			"--fullchain-path", filepath.Join(sslDir, "fullchain.pem"),
+			"-d", domain,
+		)
+		output2, err2 := cmd2.CombinedOutput()
+		if err2 != nil {
+			return fmt.Errorf("certbot failed: %s, %s", string(output), string(output2))
+		}
+	}
+	_ = output
+
+	// Copy certificates to our SSL directory
+	letsencryptDir := fmt.Sprintf("/etc/letsencrypt/live/%s", domain)
+	if _, err := os.Stat(letsencryptDir); err == nil {
+		exec.Command("cp", filepath.Join(letsencryptDir, "fullchain.pem"), filepath.Join(sslDir, "fullchain.pem")).Run()
+		exec.Command("cp", filepath.Join(letsencryptDir, "privkey.pem"), filepath.Join(sslDir, "privkey.pem")).Run()
+	}
+
+	return nil
+}
+
+// renewLetsEncrypt - ต่ออายุ certificate
+func (h *Handler) renewLetsEncrypt(domain string) error {
+	cmd := exec.Command("certbot", "renew", "--cert-name", domain, "--force-renewal")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("renewal failed: %s", string(output))
+	}
+
+	// Reload nginx
+	exec.Command("systemctl", "reload", "nginx").Run()
+
+	return nil
+}
+
+// updateNginxSSL - อัพเดท Nginx config สำหรับ SSL
+func (h *Handler) updateNginxSSL(domain string) {
+	sslDir := filepath.Join(h.config.Paths.SSLDir, domain)
+	configPath := filepath.Join(h.config.Paths.NginxConf, domain+".conf")
+
+	config := fmt.Sprintf(`server {
+    listen 80;
+    server_name %s;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name %s;
+    root %s/%s;
+    index index.php index.html;
+
+    ssl_certificate %s/fullchain.pem;
+    ssl_certificate_key %s/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    # HSTS
+    add_header Strict-Transport-Security "max-age=63072000" always;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php-fpm.sock;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location ~ /\.ht {
+        deny all;
+    }
+
+    # Let's Encrypt challenge
+    location ^~ /.well-known/acme-challenge/ {
+        root %s/%s;
+    }
+}
+`, domain, domain, h.config.Paths.WWWRoot, domain, sslDir, sslDir, h.config.Paths.WWWRoot, domain)
+
+	os.WriteFile(configPath, []byte(config), 0644)
+	exec.Command("systemctl", "reload", "nginx").Run()
+}
+
+// updateNginxNoSSL - อัพเดท Nginx config กลับเป็น HTTP only
+func (h *Handler) updateNginxNoSSL(domain string) {
+	configPath := filepath.Join(h.config.Paths.NginxConf, domain+".conf")
+
+	config := fmt.Sprintf(`server {
+    listen 80;
+    server_name %s;
+    root %s/%s;
+    index index.php index.html;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php-fpm.sock;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location ~ /\.ht {
+        deny all;
+    }
+}
+`, domain, h.config.Paths.WWWRoot, domain)
+
+	os.WriteFile(configPath, []byte(config), 0644)
+	exec.Command("systemctl", "reload", "nginx").Run()
+}
+
+// getCertificateInfo - ดึงข้อมูล SSL certificate
+func getCertificateInfo(certPath string) (map[string]interface{}, error) {
+	cmd := exec.Command("openssl", "x509", "-in", certPath, "-noout", "-enddate", "-issuer")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+
+	info := make(map[string]interface{})
+	lines := strings.Split(string(output), "\n")
+
+	for _, line := range lines {
+		if strings.HasPrefix(line, "notAfter=") {
+			dateStr := strings.TrimPrefix(line, "notAfter=")
+			if t, err := time.Parse("Jan 2 15:04:05 2006 MST", dateStr); err == nil {
+				info["expires"] = t.Format("2006-01-02")
+				info["days_left"] = int(time.Until(t).Hours() / 24)
+			}
+		}
+		if strings.HasPrefix(line, "issuer=") {
+			info["issuer"] = strings.TrimPrefix(line, "issuer=")
+		}
+	}
+
+	return info, nil
+}
+
+// StartAutoRenew - เริ่ม auto renew certificates
+func StartAutoRenew() {
+	go func() {
+		// ตรวจสอบทุกวัน
+		ticker := time.NewTicker(24 * time.Hour)
+		for range ticker.C {
+			// รัน certbot renew
+			exec.Command("certbot", "renew", "--quiet").Run()
+			exec.Command("systemctl", "reload", "nginx").Run()
+		}
+	}()
+}

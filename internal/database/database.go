@@ -260,6 +260,14 @@ func (db *DB) UpdateDomain(id int64, phpVersion string, sslEnabled, active bool)
 	return err
 }
 
+func (db *DB) UpdateDomainSSL(name string, sslEnabled bool) error {
+	_, err := db.Exec(
+		"UPDATE domains SET ssl_enabled = ? WHERE name = ?",
+		sslEnabled, name,
+	)
+	return err
+}
+
 func (db *DB) DeleteDomain(id int64) error {
 	_, err := db.Exec("DELETE FROM domains WHERE id = ?", id)
 	return err
